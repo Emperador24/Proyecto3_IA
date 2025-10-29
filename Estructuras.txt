@@ -1,0 +1,13 @@
+# Estructura de la Red Bayesiana del Aspersor
+# Formato: NodoPadre NodoHijo
+# 
+# Estructura:
+#     Lluvia
+#      /  \
+# Aspersor  PastoMojado
+#      \    /
+#    PastoMojado
+
+Lluvia Aspersor
+Lluvia PastoMojado
+Aspersor PastoMojado
