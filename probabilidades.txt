@@ -1,26 +1,105 @@
-# Tablas de Probabilidad para la Red del Aspersor
-# 
+# ============================================================
+# TABLAS DE PROBABILIDAD - RED BAYESIANA DE TRENES
+# ============================================================
+# Basado en el ejemplo de la diapositiva proporcionada
+#
 # Formato:
 # NODO NombreNodo
-# valor_padre1 valor_padre2 ... | probabilidad
+# DOMINIO valor1 valor2 valor3 ...
+# valor_padre1 valor_padre2 ... | valor_nodo probabilidad
 #
-# Para nodos sin padres (raíz): solo la probabilidad
+# Para nodos sin padres (raíz):
+# valor | valor probabilidad
+# ============================================================
 
-# Nodo Lluvia (sin padres)
-# P(Lluvia = true)
-NODO Lluvia
-0.2
 
-# Nodo Aspersor (padre: Lluvia)
-# P(Aspersor = true | Lluvia)
-NODO Aspersor
-false | 0.4
-true | 0.01
+# ============================================================
+# RAIN (Lluvia) - Nodo Raíz
+# ============================================================
+# Probabilidad marginal del nivel de lluvia
+# Dominio: {none, light, heavy}
+# 
+# IMPORTANTE: Como Rain NO tiene padres, usamos formato sin "|"
+# Formato: valor probabilidad
+# ============================================================
 
-# Nodo PastoMojado (padres: Lluvia, Aspersor)
-# P(PastoMojado = true | Lluvia, Aspersor)
-NODO PastoMojado
-false false | 0.0
-false true | 0.9
-true false | 0.8
-true true | 0.99
+NODO Rain
+DOMINIO none light heavy
+none 0.7
+light 0.2
+heavy 0.1
+
+
+# ============================================================
+# MAINTENANCE (Mantenimiento) - Depende de Rain
+# ============================================================
+# P(Maintenance | Rain)
+# Dominio: {yes, no}
+# 
+# Tabla de la diapositiva "R":
+#         yes   no
+# none    0.4   0.6
+# light   0.2   0.8
+# heavy   0.1   0.9
+# ============================================================
+
+NODO Maintenance
+DOMINIO yes no
+none | yes 0.4
+none | no 0.6
+light | yes 0.2
+light | no 0.8
+heavy | yes 0.1
+heavy | no 0.9
+
+
+# ============================================================
+# TRAIN (Tren) - Depende de Rain y Maintenance
+# ============================================================
+# P(Train | Rain, Maintenance)
+# Dominio: {on_time, delayed}
+# 
+# Tabla de la diapositiva "R M":
+#    R      M      on_time  delayed
+#   none   yes      0.8      0.2
+#   none   no       0.9      0.1
+#   light  yes      0.6      0.4
+#   light  no       0.7      0.3
+#   heavy  yes      0.4      0.6
+#   heavy  no       0.5      0.5
+# ============================================================
+
+NODO Train
+DOMINIO on_time delayed
+none yes | on_time 0.8
+none yes | delayed 0.2
+none no | on_time 0.9
+none no | delayed 0.1
+light yes | on_time 0.6
+light yes | delayed 0.4
+light no | on_time 0.7
+light no | delayed 0.3
+heavy yes | on_time 0.4
+heavy yes | delayed 0.6
+heavy no | on_time 0.5
+heavy no | delayed 0.5
+
+
+# ============================================================
+# APPOINTMENT (Cita) - Depende de Train
+# ============================================================
+# P(Appointment | Train)
+# Dominio: {attend, miss}
+# 
+# Tabla de la diapositiva "T":
+#            attend  miss
+# on_time     0.9    0.1
+# delayed     0.6    0.4
+# ============================================================
+
+NODO Appointment
+DOMINIO attend miss
+on_time | attend 0.9
+on_time | miss 0.1
+delayed | attend 0.6
+delayed | miss 0.4

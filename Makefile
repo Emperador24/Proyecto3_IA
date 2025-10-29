@@ -2,7 +2,7 @@
 
 CXX = g++
 CXXFLAGS = -std=c++11 -Wall -Wextra -O2
-TARGET = bayesian_network
+TARGET = red_bayesiana
 OBJS = main.o Nodo.o RedBayesiana.o
 
 # Regla principal

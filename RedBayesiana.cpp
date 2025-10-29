@@ -4,7 +4,6 @@
 #include <sstream>
 #include <iomanip>
 #include <algorithm>
-#include <cmath>
 
 /**
  * Constructor: inicializa una red bayesiana vacía
@@ -13,12 +12,12 @@ RedBayesiana::RedBayesiana() {}
 
 /**
  * Carga la estructura de la red desde un archivo
- * Cada línea: "NodoPadre NodoHijo" indica que NodoPadre -> NodoHijo
+ * Formato: cada línea "NodoPadre NodoHijo"
  */
 bool RedBayesiana::cargarEstructura(const std::string& nombreArchivo) {
     std::ifstream archivo(nombreArchivo);
     if (!archivo.is_open()) {
-        std::cerr << "Error al abrir archivo de estructura: " << nombreArchivo << "\n";
+        std::cerr << "Error: No se puede abrir " << nombreArchivo << "\n";
         return false;
     }
     
@@ -56,86 +55,169 @@ bool RedBayesiana::cargarEstructura(const std::string& nombreArchivo) {
         }
     }
     
-    std::cout << "Estructura cargada: " << nodos.size() << " nodos, "
-              << nodosRaiz.size() << " raíces.\n";
+    std::cout << "✓ Estructura cargada: " << nodos.size() << " nodos, "
+              << nodosRaiz.size() << " raíces\n";
     
     return true;
 }
 
 /**
  * Carga las tablas de probabilidad desde un archivo
- * Formato:
+ * Formato mejorado:
  * NODO NombreNodo
- * valores_padres | probabilidad
+ * DOMINIO valor1 valor2 valor3...
+ * valor_padre1 valor_padre2... | valor_nodo prob
  */
 bool RedBayesiana::cargarProbabilidades(const std::string& nombreArchivo) {
     std::ifstream archivo(nombreArchivo);
     if (!archivo.is_open()) {
-        std::cerr << "Error al abrir archivo de probabilidades: " << nombreArchivo << "\n";
+        std::cerr << "Error: No se puede abrir " << nombreArchivo << "\n";
         return false;
     }
     
     std::string linea;
     std::shared_ptr<Nodo> nodoActual = nullptr;
+    int lineaNum = 0;
     
     while (std::getline(archivo, linea)) {
+        lineaNum++;
+        
         // Ignorar líneas vacías o comentarios
         if (linea.empty() || linea[0] == '#') continue;
+        
+        // Eliminar espacios al inicio y final
+        size_t inicio = linea.find_first_not_of(" \t\r\n");
+        size_t fin = linea.find_last_not_of(" \t\r\n");
+        if (inicio == std::string::npos) continue;
+        linea = linea.substr(inicio, fin - inicio + 1);
         
         std::istringstream iss(linea);
         std::string palabra;
         iss >> palabra;
         
-        // Nueva tabla de nodo
+        // Nueva definición de nodo
         if (palabra == "NODO") {
             std::string nombreNodo;
             iss >> nombreNodo;
             nodoActual = obtenerNodo(nombreNodo);
             if (!nodoActual) {
-                std::cerr << "Nodo no encontrado: " << nombreNodo << "\n";
+                std::cerr << "Línea " << lineaNum << " - Advertencia: Nodo no encontrado en estructura: " 
+                         << nombreNodo << "\n";
+                std::cerr << "Asegúrese de definir primero la estructura en estructura.txt\n";
+            }
+        }
+        // Definición de dominio
+        else if (palabra == "DOMINIO" && nodoActual) {
+            std::vector<std::string> dominio;
+            std::string valor;
+            while (iss >> valor) {
+                dominio.push_back(valor);
+            }
+            nodoActual->setDominio(dominio);
+            
+            // Verificación: El dominio debe tener al menos 2 valores
+            if (dominio.size() < 2) {
+                std::cerr << "Línea " << lineaNum << " - Advertencia: Dominio con menos de 2 valores para " 
+                         << nodoActual->getNombre() << "\n";
             }
         }
         // Línea de probabilidad
-        else if (nodoActual) {
+        else if (nodoActual && nodoActual->getDominio().size() > 0) {
             // Retroceder para leer toda la línea
             iss.clear();
             iss.seekg(0);
             
-            std::vector<bool> valoresPadres;
+            std::vector<std::string> valoresPadres;
+            std::string valorNodo;
             double probabilidad;
             
-            // Si el nodo no tiene padres
-            if (nodoActual->getPadres().empty()) {
-                iss >> probabilidad;
-                nodoActual->setProbabilidad(valoresPadres, probabilidad);
-            }
-            // Si tiene padres, leer valores hasta el '|'
-            else {
-                std::string token;
-                while (iss >> token && token != "|") {
-                    if (token == "true" || token == "T" || token == "1") {
-                        valoresPadres.push_back(true);
-                    } else if (token == "false" || token == "F" || token == "0") {
-                        valoresPadres.push_back(false);
-                    }
+            // Buscar el separador '|'
+            size_t posPipe = linea.find('|');
+            
+            if (posPipe != std::string::npos) {
+                // Hay separador '|': formato "valores_padres | valor_nodo prob"
+                std::string parteIzq = linea.substr(0, posPipe);
+                std::string parteDer = linea.substr(posPipe + 1);
+                
+                // Leer valores de padres
+                std::istringstream issIzq(parteIzq);
+                std::string valor;
+                while (issIzq >> valor) {
+                    valoresPadres.push_back(valor);
                 }
-                iss >> probabilidad;
-                nodoActual->setProbabilidad(valoresPadres, probabilidad);
+                
+                // Leer valor del nodo y probabilidad
+                std::istringstream issDer(parteDer);
+                if (issDer >> valorNodo >> probabilidad) {
+                    // Verificar que el número de valores de padres coincida
+                    if (nodoActual->getPadres().size() != valoresPadres.size()) {
+                        std::cerr << "Línea " << lineaNum << " - Error: Número de valores de padres ("
+                                 << valoresPadres.size() << ") no coincide con número de padres ("
+                                 << nodoActual->getPadres().size() << ") para " 
+                                 << nodoActual->getNombre() << "\n";
+                        continue;
+                    }
+                    
+                    // Verificar que valorNodo está en el dominio
+                    auto dominio = nodoActual->getDominio();
+                    if (std::find(dominio.begin(), dominio.end(), valorNodo) == dominio.end()) {
+                        std::cerr << "Línea " << lineaNum << " - Advertencia: Valor '" << valorNodo 
+                                 << "' no está en el dominio de " << nodoActual->getNombre() << "\n";
+                    }
+                    
+                    nodoActual->setProbabilidad(valoresPadres, valorNodo, probabilidad);
+                }
+            } else {
+                // Sin separador '|': formato para nodos raíz "valor probabilidad"
+                if (nodoActual->getPadres().empty()) {
+                    if (iss >> valorNodo >> probabilidad) {
+                        // Verificar que valorNodo está en el dominio
+                        auto dominio = nodoActual->getDominio();
+                        if (std::find(dominio.begin(), dominio.end(), valorNodo) == dominio.end()) {
+                            std::cerr << "Línea " << lineaNum << " - Advertencia: Valor '" << valorNodo 
+                                     << "' no está en el dominio de " << nodoActual->getNombre() << "\n";
+                        }
+                        
+                        nodoActual->setProbabilidad({}, valorNodo, probabilidad);
+                    }
+                } else {
+                    std::cerr << "Línea " << lineaNum << " - Error: Falta separador '|' para nodo con padres\n";
+                }
             }
+        } else if (nodoActual && nodoActual->getDominio().size() == 0) {
+            std::cerr << "Línea " << lineaNum << " - Error: Debe definir DOMINIO antes de las probabilidades para " 
+                     << nodoActual->getNombre() << "\n";
         }
     }
     
     archivo.close();
-    std::cout << "Probabilidades cargadas exitosamente.\n";
+    
+    // Validar que todos los nodos tienen dominio y probabilidades completas
+    bool todasCompletas = true;
+    for (const auto& par : nodos) {
+        auto nodo = par.second;
+        if (nodo->getDominio().empty()) {
+            std::cerr << "Advertencia: Nodo '" << nodo->getNombre() 
+                     << "' no tiene dominio definido\n";
+            todasCompletas = false;
+        }
+    }
+    
+    if (todasCompletas) {
+        std::cout << "✓ Probabilidades cargadas exitosamente\n";
+    } else {
+        std::cout << "⚠ Probabilidades cargadas con advertencias\n";
+    }
+    
     return true;
 }
 
 /**
- * Muestra la estructura de la red recorriendo desde las raíces
+ * Muestra la estructura de la red
  */
 void RedBayesiana::mostrarEstructura() const {
     std::cout << "\n╔════════════════════════════════════════╗\n";
-    std::cout << "║    ESTRUCTURA DE LA RED BAYESIANA     ║\n";
+    std::cout << "║    ESTRUCTURA DE LA RED BAYESIANA      ║\n";
     std::cout << "╚════════════════════════════════════════╝\n\n";
     
     std::map<std::string, bool> visitados;
@@ -143,10 +225,12 @@ void RedBayesiana::mostrarEstructura() const {
     for (const auto& raiz : nodosRaiz) {
         mostrarEstructuraRecursiva(raiz, visitados, 0);
     }
+    
+    std::cout << "\nTotal de nodos: " << nodos.size() << "\n";
 }
 
 /**
- * Función auxiliar recursiva para mostrar la estructura
+ * Función auxiliar recursiva para mostrar estructura
  */
 void RedBayesiana::mostrarEstructuraRecursiva(std::shared_ptr<Nodo> nodo,
                                                std::map<std::string, bool>& visitados,
@@ -154,26 +238,37 @@ void RedBayesiana::mostrarEstructuraRecursiva(std::shared_ptr<Nodo> nodo,
     if (visitados[nodo->getNombre()]) return;
     visitados[nodo->getNombre()] = true;
     
-    // Indentación según el nivel
+    // Indentación
     for (int i = 0; i < nivel; i++) {
         std::cout << "  ";
     }
     
-    // Mostrar nodo
     std::cout << "└─ " << nodo->getNombre();
     
-    // Mostrar padres (predecesores)
+    // Mostrar padres
     auto padres = nodo->getPadres();
     if (!padres.empty()) {
-        std::cout << " (Padres: ";
+        std::cout << " [Padres: ";
         for (size_t i = 0; i < padres.size(); i++) {
             std::cout << padres[i]->getNombre();
             if (i < padres.size() - 1) std::cout << ", ";
         }
-        std::cout << ")";
+        std::cout << "]";
     } else {
         std::cout << " (RAÍZ)";
     }
+    
+    // Mostrar dominio
+    auto dominio = nodo->getDominio();
+    if (!dominio.empty()) {
+        std::cout << " {";
+        for (size_t i = 0; i < dominio.size(); i++) {
+            std::cout << dominio[i];
+            if (i < dominio.size() - 1) std::cout << ", ";
+        }
+        std::cout << "}";
+    }
+    
     std::cout << "\n";
     
     // Recursión en hijos
@@ -183,11 +278,11 @@ void RedBayesiana::mostrarEstructuraRecursiva(std::shared_ptr<Nodo> nodo,
 }
 
 /**
- * Muestra todas las tablas de probabilidad de la red
+ * Muestra todas las tablas de probabilidad
  */
 void RedBayesiana::mostrarTodasLasTablas() const {
     std::cout << "\n╔════════════════════════════════════════╗\n";
-    std::cout << "║     TABLAS DE PROBABILIDAD            ║\n";
+    std::cout << "║       TABLAS DE PROBABILIDAD           ║\n";
     std::cout << "╚════════════════════════════════════════╝\n";
     
     for (const auto& par : nodos) {
@@ -218,24 +313,44 @@ std::vector<std::string> RedBayesiana::obtenerNombresNodos() const {
 }
 
 /**
- * Genera todas las combinaciones de valores booleanos para un conjunto de variables
+ * Genera todas las combinaciones de valores para un conjunto de variables
  */
-std::vector<std::map<std::string, bool>> RedBayesiana::generarCombinaciones(
-    const std::vector<std::string>& variables) const {
+std::vector<std::map<std::string, std::string>> RedBayesiana::generarCombinaciones(
+    const std::vector<std::pair<std::string, std::shared_ptr<Nodo>>>& variables) const {
     
-    std::vector<std::map<std::string, bool>> combinaciones;
-    int numCombinaciones = 1 << variables.size(); // 2^n combinaciones
+    std::vector<std::map<std::string, std::string>> resultado;
     
-    for (int i = 0; i < numCombinaciones; i++) {
-        std::map<std::string, bool> combinacion;
-        for (size_t j = 0; j < variables.size(); j++) {
-            // Usar bits para generar combinaciones
-            combinacion[variables[j]] = (i & (1 << j)) != 0;
-        }
-        combinaciones.push_back(combinacion);
+    if (variables.empty()) {
+        resultado.push_back(std::map<std::string, std::string>());
+        return resultado;
     }
     
-    return combinaciones;
+    // Caso base: una variable
+    if (variables.size() == 1) {
+        auto dominio = variables[0].second->getDominio();
+        for (const auto& valor : dominio) {
+            std::map<std::string, std::string> combinacion;
+            combinacion[variables[0].first] = valor;
+            resultado.push_back(combinacion);
+        }
+        return resultado;
+    }
+    
+    // Caso recursivo: combinar primera variable con el resto
+    std::vector<std::pair<std::string, std::shared_ptr<Nodo>>> resto(
+        variables.begin() + 1, variables.end());
+    auto combinacionesResto = generarCombinaciones(resto);
+    
+    auto dominio = variables[0].second->getDominio();
+    for (const auto& valor : dominio) {
+        for (const auto& combResto : combinacionesResto) {
+            std::map<std::string, std::string> combinacion = combResto;
+            combinacion[variables[0].first] = valor;
+            resultado.push_back(combinacion);
+        }
+    }
+    
+    return resultado;
 }
 
 /**
@@ -243,7 +358,7 @@ std::vector<std::map<std::string, bool>> RedBayesiana::generarCombinaciones(
  * Usa la regla de la cadena: P(X1,...,Xn) = ∏ P(Xi | Parents(Xi))
  */
 double RedBayesiana::calcularProbabilidadConjunta(
-    const std::map<std::string, bool>& asignacion) const {
+    const std::map<std::string, std::string>& asignacion) const {
     
     double probabilidad = 1.0;
     
@@ -251,10 +366,17 @@ double RedBayesiana::calcularProbabilidadConjunta(
     for (const auto& par : nodos) {
         std::shared_ptr<Nodo> nodo = par.second;
         std::string nombreNodo = nodo->getNombre();
-        bool valorNodo = asignacion.at(nombreNodo);
+        
+        // Verificar que la variable esté en la asignación
+        if (asignacion.find(nombreNodo) == asignacion.end()) {
+            std::cerr << "Error: Variable " << nombreNodo << " no encontrada en asignación\n";
+            return 0.0;
+        }
+        
+        std::string valorNodo = asignacion.at(nombreNodo);
         
         // Obtener valores de los padres
-        std::vector<bool> valoresPadres;
+        std::vector<std::string> valoresPadres;
         for (const auto& padre : nodo->getPadres()) {
             valoresPadres.push_back(asignacion.at(padre->getNombre()));
         }
@@ -268,65 +390,75 @@ double RedBayesiana::calcularProbabilidadConjunta(
 }
 
 /**
- * Realiza inferencia sin mostrar traza
+ * Realiza inferencia sin traza
  */
-double RedBayesiana::inferencia(const std::map<std::string, bool>& consulta,
-                                const std::map<std::string, bool>& evidencia) {
+double RedBayesiana::inferencia(const std::map<std::string, std::string>& consulta,
+                                const std::map<std::string, std::string>& evidencia) {
     return inferenciaConTraza(consulta, evidencia);
 }
 
 /**
  * Realiza inferencia por enumeración con traza detallada
- * Calcula P(consulta | evidencia) usando la fórmula:
- * P(Q|E) = P(Q,E) / P(E)
+ * Calcula P(consulta | evidencia)
  */
-double RedBayesiana::inferenciaConTraza(const std::map<std::string, bool>& consulta,
-                                        const std::map<std::string, bool>& evidencia) {
+double RedBayesiana::inferenciaConTraza(
+    const std::map<std::string, std::string>& consulta,
+    const std::map<std::string, std::string>& evidencia) {
     
     std::cout << "\n╔═══════════════════════════════════════════════════╗\n";
     std::cout << "║      PROCESO DE INFERENCIA POR ENUMERACIÓN        ║\n";
     std::cout << "╚═══════════════════════════════════════════════════╝\n\n";
     
-    // Mostrar consulta y evidencia
-    std::cout << "Consulta: ";
+    // Mostrar consulta
+    std::cout << "CONSULTA: P(";
+    bool primero = true;
     for (const auto& par : consulta) {
-        std::cout << "P(" << par.first << "=" << (par.second ? "true" : "false") << ")";
+        if (!primero) std::cout << ", ";
+        std::cout << par.first << "=" << par.second;
+        primero = false;
     }
-    std::cout << "\n\nEvidencia: ";
+    std::cout << ")\n\n";
+    
+    // Mostrar evidencia
+    std::cout << "EVIDENCIA: ";
     if (evidencia.empty()) {
         std::cout << "Ninguna";
     } else {
+        primero = true;
         for (const auto& par : evidencia) {
-            std::cout << par.first << "=" << (par.second ? "true" : "false") << " ";
+            if (!primero) std::cout << ", ";
+            std::cout << par.first << "=" << par.second;
+            primero = false;
         }
     }
     std::cout << "\n\n";
     
-    // Identificar variables ocultas (no están en consulta ni evidencia)
-    std::vector<std::string> variablesOcultas;
+    // Identificar variables ocultas
+    std::vector<std::pair<std::string, std::shared_ptr<Nodo>>> variablesOcultas;
     for (const auto& par : nodos) {
         std::string nombre = par.first;
         if (consulta.find(nombre) == consulta.end() &&
             evidencia.find(nombre) == evidencia.end()) {
-            variablesOcultas.push_back(nombre);
+            variablesOcultas.push_back({nombre, par.second});
         }
     }
     
-    std::cout << "Variables ocultas a enumerar: ";
+    std::cout << "VARIABLES OCULTAS: ";
     if (variablesOcultas.empty()) {
         std::cout << "Ninguna";
     } else {
-        for (const auto& var : variablesOcultas) {
-            std::cout << var << " ";
+        for (size_t i = 0; i < variablesOcultas.size(); i++) {
+            std::cout << variablesOcultas[i].first;
+            if (i < variablesOcultas.size() - 1) std::cout << ", ";
         }
     }
     std::cout << "\n\n";
     
-    // Generar todas las combinaciones de variables ocultas
+    // Generar combinaciones de variables ocultas
     auto combinacionesOcultas = generarCombinaciones(variablesOcultas);
     
     std::cout << "─────────────────────────────────────────────────────\n";
-    std::cout << "Calculando P(Consulta, Evidencia):\n";
+    std::cout << "     Calculando P(Consulta, Evidencia):\n";
     std::cout << "─────────────────────────────────────────────────────\n\n";
     
     double probConsultaYEvidencia = 0.0;
@@ -335,7 +467,7 @@ double RedBayesiana::inferenciaConTraza(const std::map<std::string, bool>& consu
     // Sumar sobre todas las combinaciones de variables ocultas
     for (const auto& combinacionOculta : combinacionesOcultas) {
         // Crear asignación completa
-        std::map<std::string, bool> asignacionCompleta;
+        std::map<std::string, std::string> asignacionCompleta;
         
         // Agregar consulta
         for (const auto& par : consulta) {
@@ -355,28 +487,28 @@ double RedBayesiana::inferenciaConTraza(const std::map<std::string, bool>& consu
         // Calcular probabilidad conjunta
         double prob = calcularProbabilidadConjunta(asignacionCompleta);
         
-        std::cout << "Iteración " << iteracion++ << ": ";
+        std::cout << "  [" << std::setw(2) << iteracion++ << "] ";
         for (const auto& par : combinacionOculta) {
-            std::cout << par.first << "=" << (par.second ? "T" : "F") << " ";
+            std::cout << par.first << "=" << par.second << " ";
         }
-        std::cout << "=> P = " << std::fixed << std::setprecision(4) << prob << "\n";
+        std::cout << " => P = " << std::fixed << std::setprecision(6) << prob << "\n";
         
         probConsultaYEvidencia += prob;
     }
     
-    std::cout << "\nP(Consulta, Evidencia) = " << std::fixed 
-              << std::setprecision(4) << probConsultaYEvidencia << "\n\n";
+    std::cout << "\nΣ P(Consulta, Evidencia, Ocultas) = " << std::fixed 
+              << std::setprecision(6) << probConsultaYEvidencia << "\n\n";
     
     // Si hay evidencia, calcular P(Evidencia) para normalizar
     if (!evidencia.empty()) {
         std::cout << "─────────────────────────────────────────────────────\n";
-        std::cout << "Calculando P(Evidencia):\n";
+        std::cout << "    Calculando P(Evidencia):\n";
         std::cout << "─────────────────────────────────────────────────────\n\n";
         
-        // Variables ocultas incluyen también la consulta ahora
-        std::vector<std::string> todasVariablesOcultas = variablesOcultas;
+        // Variables ocultas ahora incluyen también la consulta
+        std::vector<std::pair<std::string, std::shared_ptr<Nodo>>> todasVariablesOcultas = variablesOcultas;
         for (const auto& par : consulta) {
-            todasVariablesOcultas.push_back(par.first);
+            todasVariablesOcultas.push_back({par.first, obtenerNodo(par.first)});
         }
         
         auto todasCombinaciones = generarCombinaciones(todasVariablesOcultas);
@@ -384,7 +516,7 @@ double RedBayesiana::inferenciaConTraza(const std::map<std::string, bool>& consu
         iteracion = 1;
         
         for (const auto& combinacion : todasCombinaciones) {
-            std::map<std::string, bool> asignacionCompleta;
+            std::map<std::string, std::string> asignacionCompleta;
             
             // Agregar evidencia
             for (const auto& par : evidencia) {
@@ -398,38 +530,42 @@ double RedBayesiana::inferenciaConTraza(const std::map<std::string, bool>& consu
             
             double prob = calcularProbabilidadConjunta(asignacionCompleta);
             
-            std::cout << "Iteración " << iteracion++ << ": ";
+            std::cout << "  [" << std::setw(2) << iteracion++ << "] ";
             for (const auto& par : combinacion) {
-                std::cout << par.first << "=" << (par.second ? "T" : "F") << " ";
+                std::cout << par.first << "=" << par.second << " ";
             }
-            std::cout << "=> P = " << std::fixed << std::setprecision(4) << prob << "\n";
+            std::cout << " => P = " << std::fixed << std::setprecision(6) << prob << "\n";
             
             probEvidencia += prob;
         }
         
-        std::cout << "\nP(Evidencia) = " << std::fixed 
-                  << std::setprecision(4) << probEvidencia << "\n\n";
+        std::cout << "\nΣ P(Evidencia, Ocultas) = " << std::fixed 
+                  << std::setprecision(6) << probEvidencia << "\n\n";
         
         // Calcular probabilidad condicional
         double resultado = probConsultaYEvidencia / probEvidencia;
         
         std::cout << "═════════════════════════════════════════════════════\n";
-        std::cout << "RESULTADO:\n";
-        std::cout << "P(Consulta | Evidencia) = P(Consulta, Evidencia) / P(Evidencia)\n";
-        std::cout << "                        = " << probConsultaYEvidencia 
-                  << " / " << probEvidencia << "\n";
-        std::cout << "                        = " << std::fixed 
-                  << std::setprecision(4) << resultado << "\n";
+        std::cout << "║                    RESULTADO                      ║\n";
         std::cout << "═════════════════════════════════════════════════════\n\n";
+        std::cout << "P(Consulta | Evidencia) = P(Consulta, Evidencia) / P(Evidencia)\n";
+        std::cout << "                        = " << std::fixed << std::setprecision(6)
+                  << probConsultaYEvidencia << " / " << probEvidencia << "\n";
+        std::cout << "                        = " << std::fixed << std::setprecision(4) 
+                  << resultado << "\n";
+        std::cout << "                        = " << std::fixed << std::setprecision(2)
+                  << (resultado * 100) << "%\n\n";
         
         return resultado;
     } else {
-        // Sin evidencia, la respuesta es directamente la probabilidad calculada
+        // Sin evidencia
         std::cout << "═════════════════════════════════════════════════════\n";
-        std::cout << "RESULTADO (sin evidencia):\n";
-        std::cout << "P(Consulta) = " << std::fixed 
-                  << std::setprecision(4) << probConsultaYEvidencia << "\n";
+        std::cout << "║             RESULTADO (sin evidencia)             ║\n";
         std::cout << "═════════════════════════════════════════════════════\n\n";
+        std::cout << "P(Consulta) = " << std::fixed << std::setprecision(6) 
+                  << probConsultaYEvidencia << "\n";
+        std::cout << "            = " << std::fixed << std::setprecision(2)
+                  << (probConsultaYEvidencia * 100) << "%\n\n";
         
         return probConsultaYEvidencia;
     }

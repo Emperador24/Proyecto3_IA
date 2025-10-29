@@ -1,13 +1,24 @@
-# Estructura de la Red Bayesiana del Aspersor
+# ============================================================
+# ESTRUCTURA DE LA RED BAYESIANA - EJEMPLO DE TRENES
+# ============================================================
+# 
 # Formato: NodoPadre NodoHijo
 # 
-# Estructura:
-#     Lluvia
-#      /  \
-# Aspersor  PastoMojado
-#      \    /
-#    PastoMojado
+# Representación Visual:
+#
+#           Rain
+#          /    \
+#         /      \
+#   Maintenance  Train
+#        \        /
+#         \      /
+#          \    /
+#         Appointment
+#
+# IMPORTANTE: Train tiene DOS padres: Rain y Maintenance
+# ============================================================
 
-Lluvia Aspersor
-Lluvia PastoMojado
-Aspersor PastoMojado
+Rain Maintenance
+Rain Train
+Maintenance Train
+Train Appointment
