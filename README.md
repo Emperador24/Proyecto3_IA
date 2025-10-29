@@ -440,6 +440,6 @@ El sistema cumple con **todos los requisitos** del proyecto:
 
 **¡Funcional y listo para entregar!** 🚀
 
-## 👨🏻‍💻 Equipo de Desarrollo 
+## 👨🏻‍💻 Autor
   Samuel Eduardo Emperador Contreras
   ✉️ semperadorcontreras24@gmail.com
