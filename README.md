@@ -442,4 +442,5 @@ El sistema cumple con **todos los requisitos** del proyecto:
 
 ## 👨🏻‍💻 Autor
   Samuel Eduardo Emperador Contreras
+  
   ✉️ semperadorcontreras24@gmail.com
