@@ -76,8 +76,8 @@ void inferenciaPersonalizada(RedBayesiana& red) {
 
 int main() {
     std::cout << "╔════════════════════════════════════════════════════════╗\n";
-    std::cout << "║   SISTEMA DE INFERENCIA CON REDES BAYESIANAS          ║\n";
-    std::cout << "║   Ejemplo: Red del Aspersor (Sprinkler Network)       ║\n";
+    std::cout << "║      SISTEMA DE INFERENCIA CON REDES BAYESIANAS        ║\n";
+    std::cout << "║     Ejemplo: Red del Aspersor (Sprinkler Network)      ║\n";
     std::cout << "╚════════════════════════════════════════════════════════╝\n\n";
     
     // Crear red bayesiana
