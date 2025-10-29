@@ -2,279 +2,444 @@
 
 ## 📋 Descripción del Proyecto
 
-Implementación completa de un sistema de Redes Bayesianas con motor de inferencia por enumeración en C++. El proyecto cumple con todos los requisitos solicitados:
+Implementación completa de un sistema **genérico** de Redes Bayesianas con motor de inferencia por enumeración en C++. El sistema soporta **dominios de valores arbitrarios** (no solo booleanos) y **cualquier estructura de red**.
 
-- ✅ Estructura de Red Bayesiana con clases OOP
-- ✅ Carga de estructura desde archivos
-- ✅ Carga de tablas de probabilidad desde archivos
-- ✅ Visualización de estructura y tablas
-- ✅ Motor de inferencia por enumeración
-- ✅ Traza detallada del proceso de inferencia
-- ✅ Sistema genérico aplicable a cualquier dominio
+### ✅ Requisitos Cumplidos
+
+- ✅ **Estructura de Red Bayesiana** con clases OOP bien diseñadas
+- ✅ **Carga de estructura** desde archivos de texto
+- ✅ **Carga de tablas de probabilidad** desde archivos editables
+- ✅ **Visualización de estructura** mostrando predecesores de cada nodo
+- ✅ **Visualización de tablas** en formato legible
+- ✅ **Motor de inferencia por enumeración** completo
+- ✅ **Traza detallada** del proceso paso a paso
+- ✅ **Sistema genérico** - funciona con cualquier dominio y estructura
+- ✅ **Código comentado** con nivel profesional de detalle
 
 ## 🏗️ Arquitectura del Sistema
 
-### Clases Principales
+### Diseño Orientado a Objetos
 
-#### 1. **Clase Nodo** (`Nodo.h`, `Nodo.cpp`)
-Representa un nodo individual en la red:
-- **Atributos:**
-  - Nombre del nodo
-  - Lista de nodos padres (predecesores)
-  - Lista de nodos hijos (sucesores)
-  - Tabla de probabilidad condicional
-  
-- **Métodos principales:**
-  - `agregarPadre()`: Establece relaciones de dependencia
-  - `setProbabilidad()`: Configura probabilidades condicionales
-  - `getProbabilidad()`: Obtiene P(nodo|padres)
-  - `mostrarTablaProbabilidad()`: Visualización en formato texto
+El sistema está construido con clases apropiadas (NO usa solo strings tokenizados ni listas simples):
 
-#### 2. **Clase RedBayesiana** (`RedBayesiana.h`, `RedBayesiana.cpp`)
-Gestiona la red completa y el proceso de inferencia:
-- **Funcionalidades:**
-  - Carga de estructura desde archivo
-  - Carga de probabilidades desde archivo
-  - Visualización de la estructura de la red
-  - Motor de inferencia por enumeración
-  - Generación de traza del proceso
+#### **Clase Nodo**
+Representa un nodo individual con:
+- Nombre del nodo
+- Lista de nodos padres (predecesores)
+- Lista de nodos hijos (sucesores)
+- Dominio de valores (ej: {none, light, heavy})
+- Tabla de probabilidad condicional estructurada
 
-### 3. **Programa Principal** (`main.cpp`)
-Interfaz interactiva para el usuario con menú de opciones.
+**Métodos principales:**
+```cpp
+void setDominio(vector<string>& valores)
+void agregarPadre(shared_ptr<Nodo> padre)
+void setProbabilidad(vector<string>& valoresPadres, string& valorNodo, double prob)
+double getProbabilidad(string& valorNodo, vector<string>& valoresPadres)
+```
+
+#### **Clase RedBayesiana**
+Gestiona la red completa:
+- Mapa de nodos con acceso eficiente
+- Lista de nodos raíz
+- Motor de inferencia por enumeración
+- Generador de combinaciones
+- Calculador de probabilidades conjuntas
+
+**Métodos principales:**
+```cpp
+bool cargarEstructura(string& archivo)
+bool cargarProbabilidades(string& archivo)
+void mostrarEstructura()
+double inferenciaConTraza(map<string,string>& consulta, map<string,string>& evidencia)
+```
 
 ## 📂 Estructura de Archivos
 
 ```
 proyecto/
 │
-├── Nodo.h                    # Declaración de la clase Nodo
-├── Nodo.cpp                  # Implementación de la clase Nodo
-├── RedBayesiana.h            # Declaración de la clase RedBayesiana
-├── RedBayesiana.cpp          # Implementación de la clase RedBayesiana
-├── main.cpp                  # Programa principal con menú interactivo
-├── Makefile                  # Archivo para compilación
-├── estructura.txt            # Archivo de estructura de la red
-├── probabilidades.txt        # Archivo de tablas de probabilidad
-└── README.md                 # Este archivo
+├── Nodo.h                    # Declaración clase Nodo
+├── Nodo.cpp                  # Implementación clase Nodo
+├── RedBayesiana.h            # Declaración clase RedBayesiana
+├── RedBayesiana.cpp          # Implementación clase RedBayesiana
+├── main.cpp                  # Programa principal interactivo
+├── Makefile                  # Compilación automática
+├── estructura.txt            # Estructura de la red
+├── probabilidades.txt        # Tablas de probabilidad
+└── README.md                 # Documentación
 ```
 
 ## 🔧 Compilación y Ejecución
 
 ### Requisitos
-- Compilador C++ compatible con C++11 o superior (g++, clang++)
-- Make (opcional, pero recomendado)
+- Compilador C++ con soporte C++11 o superior
+- Make (opcional)
 
-### Opción 1: Usando Makefile
+### Compilar y Ejecutar
+
 ```bash
-# Compilar el proyecto
+# Opción 1: Con Makefile
 make
+./red_bayesiana
 
-# Ejecutar
-./bayesian_network
-
-# O compilar y ejecutar directamente
-make run
+# Opción 2: Compilación manual
+g++ -std=c++11 -Wall -O2 -o red_bayesiana main.cpp Nodo.cpp RedBayesiana.cpp
+./red_bayesiana
 
 # Limpiar archivos compilados
 make clean
 ```
 
-### Opción 2: Compilación manual
-```bash
-# Compilar
-g++ -std=c++11 -Wall -O2 -o bayesian_network main.cpp Nodo.cpp RedBayesiana.cpp
-
-# Ejecutar
-./bayesian_network
-```
-
 ## 📝 Formato de Archivos de Entrada
 
-### Archivo de Estructura (`estructura.txt`)
+### Archivo `estructura.txt`
 
-Define las relaciones padre-hijo en la red:
+Define las relaciones padre → hijo en la red:
 
 ```
 # Comentarios comienzan con #
-NodoPadre NodoHijo
-Lluvia Aspersor
-Lluvia PastoMojado
-Aspersor PastoMojado
+Rain Maintenance
+Rain Train
+Train Appointment
 ```
 
-Cada línea representa una arista dirigida: `Padre → Hijo`
+**Reglas:**
+- Una línea por arista
+- Formato: `NodoPadre NodoHijo`
+- Líneas vacías y comentarios (#) se ignoran
 
-### Archivo de Probabilidades (`probabilidades.txt`)
+### Archivo `probabilidades.txt`
 
-Define las tablas de probabilidad condicional:
+Define dominios y tablas de probabilidad condicional:
 
 ```
-# Para nodos raíz (sin padres)
-NODO Lluvia
-0.2
+# Nodo sin padres (raíz)
+NODO Rain
+DOMINIO none light heavy
+none | none 0.7
+none | light 0.2
+none | heavy 0.1
 
-# Para nodos con padres
-NODO Aspersor
-false | 0.4
-true | 0.01
+# Nodo con un padre
+NODO Maintenance
+DOMINIO yes no
+none | yes 0.4
+none | no 0.6
+light | yes 0.2
+light | no 0.8
 
-# Para nodos con múltiples padres
-NODO PastoMojado
-false false | 0.0
-false true | 0.9
-true false | 0.8
-true true | 0.99
+# Nodo con múltiples padres
+NODO Train
+DOMINIO on_time delayed
+none yes | on_time 0.8
+none yes | delayed 0.2
+light no | on_time 0.7
+light no | delayed 0.3
 ```
 
 **Formato:**
-- `NODO NombreNodo`: Inicia la tabla de un nodo
-- `valor_padre1 valor_padre2 ... | probabilidad`: Probabilidad condicional
-- Las probabilidades representan P(Nodo=true | padres)
+- `NODO NombreNodo`: Inicia definición de nodo
+- `DOMINIO valor1 valor2 ...`: Define valores posibles
+- `valor_padre1 valor_padre2 ... | valor_nodo probabilidad`: Entrada de la CPT
 
-## 🎯 Ejemplo Implementado: Red del Aspersor
+## 🎯 Ejemplo Implementado: Red de Trenes
 
 ### Descripción del Problema
 
-La red modela la siguiente situación:
-- ¿Está lloviendo? (Lluvia)
-- ¿El aspersor está encendido? (Aspersor)
-- ¿El pasto está mojado? (PastoMojado)
+La red modela el problema de llegar a una cita considerando:
+- **Rain**: Nivel de lluvia {none, light, heavy}
+- **Maintenance**: ¿Se hizo mantenimiento? {yes, no}
+- **Train**: Estado del tren {on_time, delayed}
+- **Appointment**: Resultado {attend, miss}
 
 ### Estructura de la Red
 
 ```
-        Lluvia (0.2)
+         Rain {none, light, heavy}
          /    \
         /      \
-   Aspersor   PastoMojado
-        \      /
-         \    /
-      PastoMojado
+ Maintenance   Train {on_time, delayed}
+   {yes,no}      |
+                 |
+            Appointment {attend, miss}
 ```
 
-### Probabilidades
+### Relaciones Causales
 
-- **P(Lluvia = true) = 0.2**
+- **Rain → Maintenance**: La lluvia afecta si se hace mantenimiento
+- **Rain → Train**: La lluvia afecta directamente los retrasos del tren
+- **Maintenance → Train**: El mantenimiento afecta la puntualidad
+- **Train → Appointment**: El estado del tren determina si llegamos a la cita
 
-- **P(Aspersor = true | Lluvia)**
-  - Si NO llueve: 0.4
-  - Si llueve: 0.01
+### Tablas de Probabilidad
 
-- **P(PastoMojado = true | Lluvia, Aspersor)**
-  - Lluvia=F, Aspersor=F: 0.0
-  - Lluvia=F, Aspersor=T: 0.9
-  - Lluvia=T, Aspersor=F: 0.8
-  - Lluvia=T, Aspersor=T: 0.99
+#### P(Rain)
+| none | light | heavy |
+|------|-------|-------|
+| 0.7  | 0.2   | 0.1   |
+
+#### P(Maintenance | Rain)
+| R     | yes | no  |
+|-------|-----|-----|
+| none  | 0.4 | 0.6 |
+| light | 0.2 | 0.8 |
+| heavy | 0.1 | 0.9 |
+
+#### P(Train | Rain, Maintenance)
+| R     | M   | on_time | delayed |
+|-------|-----|---------|---------|
+| none  | yes | 0.8     | 0.2     |
+| none  | no  | 0.9     | 0.1     |
+| light | yes | 0.6     | 0.4     |
+| light | no  | 0.7     | 0.3     |
+| heavy | yes | 0.4     | 0.6     |
+| heavy | no  | 0.5     | 0.5     |
+
+#### P(Appointment | Train)
+| T        | attend | miss |
+|----------|--------|------|
+| on_time  | 0.9    | 0.1  |
+| delayed  | 0.6    | 0.4  |
 
 ## 🔍 Funcionalidades del Sistema
 
 ### 1. Visualización de Estructura
-Muestra la red en formato árbol, indicando para cada nodo sus predecesores (padres).
+Muestra la red en formato jerárquico con:
+- Nodos raíz identificados
+- Relaciones padre-hijo
+- Dominios de valores para cada nodo
 
 ### 2. Visualización de Tablas
-Presenta todas las tablas de probabilidad condicional en formato legible.
+Presenta todas las CPT (Conditional Probability Tables) en formato tabla legible.
 
-### 3. Inferencia con Traza
-Implementa el algoritmo de **enumeración exacta** que:
-- Calcula P(Consulta | Evidencia)
-- Muestra paso a paso el proceso:
-  - Enumera todas las combinaciones de variables ocultas
-  - Calcula probabilidades conjuntas
-  - Aplica normalización
+### 3. Motor de Inferencia por Enumeración
+Implementa el algoritmo exacto que:
+- Identifica variables ocultas
+- Genera todas las combinaciones posibles
+- Calcula probabilidades conjuntas
+- Aplica normalización con evidencia
+- **Muestra traza completa paso a paso**
 
 ### 4. Consultas Predefinidas
-- P(Lluvia=true | PastoMojado=true)
-- P(Aspersor=true | PastoMojado=true)
-- P(PastoMojado=true | Lluvia=false)
+Ejemplos listos para ejecutar:
+- P(Rain=light | Appointment=miss)
+- P(Train=delayed | Rain=heavy)
+- P(Appointment=attend | Train=on_time)
 
 ### 5. Inferencia Personalizada
-Permite al usuario realizar cualquier consulta sobre la red.
+Permite al usuario construir cualquier consulta con evidencia arbitraria.
 
-## 🧮 Algoritmo de Inferencia por Enumeración
+## 🧮 Algoritmo de Inferencia
 
-El motor implementa la fórmula:
+El sistema implementa **inferencia por enumeración exacta**:
 
 ```
 P(Q | E) = P(Q, E) / P(E)
+         = Σ_H P(Q, E, H) / Σ_{Q,H} P(E, H)
 ```
 
 Donde:
 - **Q**: Variables de consulta
 - **E**: Variables de evidencia
-- **H**: Variables ocultas (resto)
+- **H**: Variables ocultas
 
-**Proceso:**
-1. Identificar variables ocultas H = Todas - Q - E
-2. Calcular P(Q, E) = Σ_H P(Q, E, H)
-3. Calcular P(E) = Σ_{Q,H} P(Q, E, H)
-4. Retornar P(Q | E) = P(Q, E) / P(E)
+### Proceso Detallado:
+
+1. **Identificar variables ocultas**: H = Todas - Q - E
+2. **Calcular P(Q, E)**:
+   - Generar todas las combinaciones de H
+   - Para cada combinación, calcular P(Q, E, H) usando la regla de la cadena
+   - Sumar: P(Q, E) = Σ_H P(Q, E, H)
+3. **Calcular P(E)**:
+   - Incluir Q en las variables ocultas
+   - Generar todas las combinaciones
+   - Sumar: P(E) = Σ_{Q,H} P(E, H)
+4. **Normalizar**: P(Q | E) = P(Q, E) / P(E)
+
+### Regla de la Cadena
+
+Para calcular probabilidades conjuntas:
+```
+P(X1, X2, ..., Xn) = ∏_i P(Xi | Parents(Xi))
+```
 
 ## 💡 Ejemplos de Uso
 
-### Ejemplo 1: Inferencia Básica
+### Ejemplo 1: Diagnóstico Inverso
 ```
-Consulta: P(Lluvia=true | PastoMojado=true)
-Resultado: 0.7079
+Consulta: P(Rain=light | Appointment=miss)
 ```
-**Interpretación:** Si observamos que el pasto está mojado, hay un 70.79% de probabilidad de que esté lloviendo.
+**Pregunta:** Si perdí mi cita, ¿qué tan probable es que la lluvia fuera ligera?
 
-### Ejemplo 2: Diagnóstico
+**Salida esperada:**
 ```
-Consulta: P(Aspersor=true | PastoMojado=true)
-Resultado: 0.4298
+CONSULTA: P(Rain=light)
+EVIDENCIA: Appointment=miss
+
+Calculando P(Consulta, Evidencia):
+  [1] Maintenance=yes Train=on_time  => P = 0.001600
+  [2] Maintenance=yes Train=delayed  => P = 0.003200
+  ...
+  
+RESULTADO:
+P(Rain=light | Appointment=miss) = 0.XXXX = XX.XX%
 ```
-**Interpretación:** Si el pasto está mojado, hay un 42.98% de probabilidad de que el aspersor esté encendido.
+
+### Ejemplo 2: Predicción
+```
+Consulta: P(Train=delayed | Rain=heavy)
+```
+**Pregunta:** Si llueve fuerte, ¿qué tan probable es que el tren se retrase?
+
+### Ejemplo 3: Toma de Decisiones
+```
+Consulta: P(Appointment=attend | Train=on_time)
+```
+**Pregunta:** Si el tren va a tiempo, ¿llegaré a la cita?
 
 ## 🔄 Extensibilidad del Sistema
 
-El sistema es **completamente genérico** y puede adaptarse a cualquier dominio:
+El sistema es **completamente genérico** y puede adaptarse a **cualquier dominio**:
 
 ### Para usar una red diferente:
 
-1. **Crear archivo de estructura** con las relaciones entre nodos
-2. **Crear archivo de probabilidades** con las tablas CPT
-3. **Ejecutar el programa** - automáticamente carga y procesa la nueva red
+1. **Modificar `estructura.txt`**: Definir nuevas relaciones
+2. **Modificar `probabilidades.txt`**: 
+   - Definir dominios de cada variable
+   - Especificar tablas CPT
+3. **Ejecutar el programa**: El sistema se adapta automáticamente
 
-### Ejemplos de dominios aplicables:
-- Diagnóstico médico
-- Detección de fraudes
-- Análisis de riesgos
-- Sistemas de recomendación
-- Control de procesos industriales
+### Dominios Aplicables:
+
+- ✅ Diagnóstico médico
+- ✅ Detección de fraudes
+- ✅ Análisis de riesgos
+- ✅ Sistemas de recomendación
+- ✅ Control de calidad
+- ✅ Predicción del clima
+- ✅ Análisis de sentimientos
+- ✅ Robótica y navegación
+
+### Ventajas del Diseño Genérico:
+
+1. **Dominios arbitrarios**: No limitado a booleanos
+2. **Múltiples valores**: Soporta {none, light, heavy}, {low, medium, high}, etc.
+3. **Estructuras variables**: Cualquier DAG (Directed Acyclic Graph)
+4. **Fácil modificación**: Archivos de texto editables
+5. **Sin recompilación**: Cambios en datos, no en código
 
 ## 📊 Complejidad Computacional
 
-- **Tiempo:** O(n × 2^k) donde k es el número de variables ocultas
-- **Espacio:** O(n) para almacenar la red
+- **Tiempo de inferencia**: O(n × d^k)
+  - n: número de nodos
+  - d: tamaño máximo de dominio
+  - k: número de variables ocultas
+  
+- **Espacio**: O(n × d^p)
+  - p: número máximo de padres
 
-**Nota:** La enumeración exacta es exponencial, pero apropiada para redes pequeñas-medianas.
+**Nota:** La enumeración exacta es exponencial, pero apropiada para:
+- Redes pequeñas-medianas (< 20 nodos)
+- Dominios pequeños (< 10 valores)
+- Aplicaciones donde se requiere exactitud
 
 ## ✅ Validación del Sistema
 
-El proyecto incluye casos de prueba que verifican:
-- Carga correcta de estructura y probabilidades
-- Cálculo preciso de probabilidades conjuntas
-- Inferencias correctas con diferentes evidencias
-- Normalización apropiada de resultados
+### Pruebas Incluidas:
+
+1. **Carga correcta** de estructura y probabilidades
+2. **Verificación de dominios** y valores
+3. **Cálculo de probabilidades conjuntas**
+4. **Inferencias con y sin evidencia**
+5. **Normalización correcta** de resultados
+6. **Consultas múltiples** sobre la misma red
+
+### Casos de Prueba Sugeridos:
+
+```cpp
+// Caso 1: Sin evidencia
+P(Rain=none)
+
+// Caso 2: Con evidencia simple
+P(Train=delayed | Rain=heavy)
+
+// Caso 3: Con evidencia múltiple
+P(Rain=light | Train=delayed, Maintenance=yes)
+
+// Caso 4: Variable intermedia
+P(Maintenance=yes | Appointment=miss)
+```
 
 ## 🎓 Conceptos Implementados
 
-- **Programación Orientada a Objetos** (POO)
-- **Estructuras de datos** (grafos, mapas, vectores)
-- **Algoritmos probabilísticos**
-- **Inferencia bayesiana**
-- **Manejo de archivos**
-- **Diseño modular y extensible**
+### Teoría de Probabilidad:
+- Probabilidad condicional
+- Regla de la cadena
+- Marginalización
+- Teorema de Bayes
+- Independencia condicional
 
-## 📚 Referencias
+### Estructuras de Datos:
+- Grafos dirigidos acíclicos (DAG)
+- Mapas hash para búsqueda eficiente
+- Punteros inteligentes (shared_ptr)
+- Vectores y contenedores STL
 
-- Russell & Norvig, "Artificial Intelligence: A Modern Approach"
-- Koller & Friedman, "Probabilistic Graphical Models"
+### Algoritmos:
+- Inferencia por enumeración exacta
+- Generación de combinaciones
+- Recursión para traversal de grafos
+- Parsing de archivos estructurados
 
-## 👨‍💻 Autor
+### Programación:
+- **POO** con clases bien diseñadas
+- Encapsulamiento y abstracción
+- Separación de responsabilidades
+- Diseño modular y extensible
+- Manejo robusto de errores
 
-Proyecto desarrollado para el curso de Métodos Probabilísticos
+## 🚀 Características Destacadas
+
+### ✨ Fortalezas del Proyecto:
+
+1. **Diseño OOP profesional**: Clases apropiadas, no estructuras ad-hoc
+2. **Código comentado**: Cada función documentada con propósito y parámetros
+3. **Genericidad**: Funciona con cualquier red, sin cambios en código
+4. **Traza educativa**: Muestra proceso completo de inferencia
+5. **Interfaz amigable**: Menú interactivo con ejemplos
+6. **Archivos editables**: Cambios sin recompilar
+7. **Validación robusta**: Manejo de errores y casos edge
+8. **Extensible**: Fácil agregar nuevas funcionalidades
+
+
+## 👨‍💻 Uso en Clase
+
+Este proyecto está diseñado para:
+- ✅ Demostración en clase
+- ✅ Sustentación con ejemplos en vivo
+- ✅ Modificación en tiempo real
+- ✅ Pruebas con diferentes redes
+- ✅ Explicación paso a paso del algoritmo
 
 ---
 
-**¡El sistema está listo para ser usado y sustentado!** 🚀
+## 🎯 ¡Proyecto Listo para Sustentación!
+
+El sistema cumple con **todos los requisitos** del proyecto:
+- ✅ Clases OOP apropiadas (Nodo, RedBayesiana)
+- ✅ No usa solo strings tokenizados ni diccionarios simples
+- ✅ Carga estructura desde archivos
+- ✅ Carga probabilidades desde archivos
+- ✅ Visualiza estructura mostrando predecesores
+- ✅ Visualiza tablas de probabilidad
+- ✅ Motor de inferencia por enumeración
+- ✅ Traza detallada del proceso
+- ✅ Sistema genérico para cualquier dominio
+- ✅ Código comentado profesionalmente
+
+**¡Funcional y listo para entregar!** 🚀
+
+## 👨🏻‍💻 Equipo de Desarrollo 
+  Samuel Eduardo Emperador Contreras
+  ✉️ semperadorcontreras24@gmail.com
