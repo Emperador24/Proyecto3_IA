@@ -502,7 +502,7 @@ double RedBayesiana::inferenciaConTraza(
     // Si hay evidencia, calcular P(Evidencia) para normalizar
     if (!evidencia.empty()) {
         std::cout << "─────────────────────────────────────────────────────\n";
-        std::cout << "    Calculando P(Evidencia):\n";
+        std::cout << "        Calculando P(Evidencia):\n";
         std::cout << "─────────────────────────────────────────────────────\n\n";
         
         // Variables ocultas ahora incluyen también la consulta
