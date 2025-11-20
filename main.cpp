@@ -7,6 +7,7 @@
 /**
  * Programa principal para Red Bayesiana Genérica
  * Sistema totalmente interactivo - funciona con CUALQUIER ejemplo
+ * Grupo 1
  */
 
 void limpiarPantalla() {
